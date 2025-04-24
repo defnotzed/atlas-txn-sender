@@ -33,6 +33,10 @@ const SEND_TXN_RETRIES: usize = 10;
 #[async_trait]
 pub trait TxnSender: Send + Sync {
     fn send_transaction(&self, txn: TransactionData);
+    
+    fn get_solana_rpc(&self) -> Arc<dyn SolanaRpc>;
+
+    fn get_leader_tracker(&self) -> Arc<dyn LeaderTracker>;
 }
 
 pub struct TxnSenderImpl {
@@ -325,6 +329,15 @@ impl TxnSender for TxnSenderImpl {
             leader_num += 1;
         }
     }
+    
+    fn get_solana_rpc(&self) -> Arc<dyn SolanaRpc> {
+        self.solana_rpc.clone()
+    }
+    
+    fn get_leader_tracker(&self) -> Arc<dyn LeaderTracker> {
+        self.leader_tracker.clone()
+    }
+    
 }
 
 fn bin_counter_to_tag(counter: Option<i32>, bins: &Vec<i32>) -> String {

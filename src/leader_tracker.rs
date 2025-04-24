@@ -12,7 +12,7 @@ use dashmap::DashMap;
 use indexmap::IndexMap;
 use solana_client::rpc_client::RpcClient;
 use solana_rpc_client_api::response::RpcContactInfo;
-use solana_sdk::slot_history::Slot;
+use solana_sdk::{hash::Hash, slot_history::Slot};
 use tokio::time::sleep;
 use tracing::{debug, error, info};
 
@@ -21,6 +21,11 @@ use crate::{errors::AtlasTxnSenderError, solana_rpc::SolanaRpc};
 pub trait LeaderTracker: Send + Sync {
     /// get_leaders returns the next slot leaders in order
     fn get_leaders(&self) -> Vec<RpcContactInfo>;
+
+    /// check_blockhash_validity checks if a given block hash is still valid
+    fn is_blockhash_valid(&self, blockhash: Hash) -> Result<bool, AtlasTxnSenderError>;
+    
+    
 }
 
 const NUM_LEADERS_PER_SLOT: usize = 4;
@@ -170,5 +175,16 @@ impl LeaderTracker for LeaderTrackerImpl {
             .into_iter()
             .map(|v| v.to_owned())
             .collect()
+    }
+
+    fn is_blockhash_valid(&self, blockhash: Hash) -> Result<bool, AtlasTxnSenderError> {
+        match self.rpc_client.is_blockhash_valid(&blockhash, self.rpc_client.commitment()) {
+            Ok(is_valid) => Ok(is_valid),
+            Err(err) => {
+                // Log the error before returning
+                error!("Error checking blockhash validity via RPC: {}", err);
+                Err(format!("Error checking blockhash validity: {}", err).into())
+            }
+        }
     }
 }
